@@ -7,6 +7,7 @@
  *   in 3D with periodic BC.  Arbitrary power spectrum specified using ispect:
  *  -  ispect=1: power law - original form
  *  -  ispect=2: form from Gammie&Ostriker
+ *  -  ispect=3: parabolic form from Schmidt et al. A&A, 2009, 494, 127-145
  *  Driving specified using idrive
  *  -  idrive=0: driven turbulence (de=dedt*dt before each time step,
  *                                     unless IMPULSIVE_DRIVING enabled)
@@ -138,23 +139,27 @@ static void pspect(ath_fft_data *ampl)
   double q1,q2,q3;
 
   /* set random amplitudes with gaussian deviation */
-  for (k=0; k<nx3; k++) {
-    for (j=0; j<nx2; j++) {
-      for (i=0; i<nx1; i++) {
-        q1 = ran2(&rseed);
-        q2 = ran2(&rseed);
-        q3 = sqrt(-2.0*log(q1+1.0e-20))*cos(2.0*PI*q2);
-        q1 = ran2(&rseed);
-        ampl[OFST(i,j,k)][0] = q3*cos(2.0*PI*q1);
-        ampl[OFST(i,j,k)][1] = q3*sin(2.0*PI*q1);
+  if (ispect != 3) {
+    for (k=0; k<nx3; k++) {
+      for (j=0; j<nx2; j++) {
+        for (i=0; i<nx1; i++) {
+          q1 = ran2(&rseed);
+          q2 = ran2(&rseed);
+          q3 = sqrt(-2.0*log(q1+1.0e-20))*cos(2.0*PI*q2);
+          q1 = ran2(&rseed);
+          ampl[OFST(i,j,k)][0] = q3*cos(2.0*PI*q1);
+          ampl[OFST(i,j,k)][1] = q3*sin(2.0*PI*q1);
+        }
       }
     }
   }
-
   /* set power spectrum
    *   ispect=1: power law - original form
    *   ispect=2: form from Gammie&Ostriker
+   *   ispect=3: parabolic form from Schmidt et al. A&A, 2009, 494, 127-145
    */
+  double tmp;
+
   for (k=0; k<nx3; k++) {
     for (j=0; j<nx2; j++) {
       for (i=0; i<nx1; i++) {
@@ -170,6 +175,13 @@ static void pspect(ath_fft_data *ampl)
             /* G&O form */
             ampl[OFST(i,j,k)][0] *= pow(q3,3.0)*exp(-4.0*q3/kpeak);
             ampl[OFST(i,j,k)][1] *= pow(q3,3.0)*exp(-4.0*q3/kpeak);
+          } else if (ispect == 3) {
+            /* parabolic form */
+            tmp = pow(q3/kpeak,2.)*(2.-pow(q3/kpeak,2.));
+            if (tmp < 0.)
+              tmp = 0.;
+            ampl[OFST(i,j,k)][0] = tmp;
+            ampl[OFST(i,j,k)][1] = tmp;
           }
         } else {
           /* introduce cut-offs at klow and khigh */
@@ -179,6 +191,32 @@ static void pspect(ath_fft_data *ampl)
       }
     }
   }
+  
+  // Apply Gaussian deviations (from Numerical Recipes and W. Schmidt)
+  double v_sqr, v1, v2;
+  double norm; 
+  
+  if (ispect == 3) {
+    for (k=0; k<nx3; k++) {
+      for (j=0; j<nx2; j++) {
+        for (i=0; i<nx1; i++) {
+
+          do {        
+            v1 = 2.0* ran2(&rseed) - 1.0;
+            v2 = 2.0* ran2(&rseed) - 1.0;
+            v_sqr = v1*v1+v2*v2;
+          } while (v_sqr >= 1.0 || v_sqr == 0.0);
+
+          norm = sqrt(-2.0*log(v_sqr)/v_sqr);
+
+          ampl[OFST(i,j,k)][0] *= norm * v1;
+          ampl[OFST(i,j,k)][1] *= norm * v2;
+
+        }
+      }
+    }
+  }
+  
   ampl[0][0] = 0.0;
   ampl[0][1] = 0.0;
 
@@ -434,9 +472,9 @@ static void initialize(GridS *pGrid, DomainS *pD)
   gnx3 = pD->Nx[2];
 
   /* Get extents of local FFT grid in global coordinates */
-  gis=is+pGrid->Disp[0];  gie=ie+pGrid->Disp[0];
-  gjs=js+pGrid->Disp[1];  gje=je+pGrid->Disp[1];
-  gks=ks+pGrid->Disp[2];  gke=ke+pGrid->Disp[2];
+  gis=is+pGrid->Disp[0]-nghost;  gie=ie+pGrid->Disp[0];
+  gjs=js+pGrid->Disp[1]-nghost;  gje=je+pGrid->Disp[1];
+  gks=ks+pGrid->Disp[2]-nghost;  gke=ke+pGrid->Disp[2];
 /* ----------------------------------------------------------- */
 
   /* Get size of arrays with ghost cells */
@@ -462,7 +500,7 @@ static void initialize(GridS *pGrid, DomainS *pD)
   ispect = par_geti("problem","ispect");
   if (ispect == 1) {
     expo = par_getd("problem","expo");
-  } else if (ispect == 2) {
+  } else if (ispect == 2 || ispect == 3) {
     kpeak = par_getd("problem","kpeak")*2.0*PI;
   } else {
     ath_error("Invalid value for ispect\n");
