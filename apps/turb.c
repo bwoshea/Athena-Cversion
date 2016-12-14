@@ -707,28 +707,30 @@ void problem_write_restart(MeshS *pM, FILE *fp)
 
 void problem_read_restart(MeshS *pM, FILE *fp)
 {  
-/*  GridS *pGrid;
+  GridS *pGrid;
   DomainS *pDomain;
   int nl, nd;
+  int ixs,jxs,kxs;
   
   for (nl=0; nl<(pM->NLevels); nl++){
     for (nd=0; nd<(pM->DomainsPerLevel[nl]); nd++){
       if (pM->Domain[nl][nd].Grid != NULL){
 
          pGrid = pM->Domain[nl][nd].Grid;
-         pDomain = pM->Domain[nl][nd];
-*/  /* Allocate memory and initialize everything */
-/*         rseed  = (pGrid->my_id+1);
+         pDomain = &(pM->Domain[nl][nd]);  //Allocate memory and initialize everything
+	 /* Ensure a different initial random seed for each process in an MPI calc. */
+	 ixs = pGrid->Disp[0];
+	 jxs = pGrid->Disp[1];
+	 kxs = pGrid->Disp[2];
+	 rseed = -1 - (ixs + pDomain->Nx[0]*(jxs + pDomain->Nx[1]*kxs));
          initialize(pGrid, pDomain);
          tdrive = pGrid->time;
-
-*/  /* Generate a new power spectrum */
-/*         if (idrive == 0) generate();
+	 //Generate a new power spectrum
+	 if (idrive == 0) generate();
 
       }
     }
   }
-*/
   return;
 }
 
