@@ -50,7 +50,7 @@ void problem(DomainS *pDomain)
     for (j=js; j<=je; j++) {
       for (i=is; i<=ie; i++) {
         cc_pos(pGrid,i,j,k,&x1,&x2,&x3);
-        W.Vy = 1.5-0.5(1+erf((x1-0.25)/0.01)-erf((x1+0.25)/0.01))
+        W.Vy = 1.5-0.5*(1+erf((x1-0.25)/0.01)-erf((x1+0.25)/0.01));
         U1d = Prim1D_to_Cons1D(&(W), &Bx);
         pGrid->U[k][j][i].d  = U1d.d;
         pGrid->U[k][j][i].M1 = U1d.Mx; 
