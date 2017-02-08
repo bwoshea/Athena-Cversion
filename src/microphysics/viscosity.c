@@ -354,50 +354,50 @@ void ViscStress_aniso(DomainS *pD)
     for (i=is; i<=ie+1; i++) {
 
       /* Monotonized Velocity gradient dVx/dy */
-      dVxdy = limiter4(Vel[k][j+1][i  ].x - Vel[k][j  ][i  ].x,
-                       Vel[k][j  ][i  ].x - Vel[k][j-1][i  ].x,
-                       Vel[k][j+1][i-1].x - Vel[k][j  ][i-1].x,
-                       Vel[k][j  ][i-1].x - Vel[k][j-1][i-1].x);
+      dVxdy = limiter4(Vel[k][j+1][i  ].x1 - Vel[k][j  ][i  ].x1,
+                       Vel[k][j  ][i  ].x1 - Vel[k][j-1][i  ].x1,
+                       Vel[k][j+1][i-1].x1 - Vel[k][j  ][i-1].x1,
+                       Vel[k][j  ][i-1].x1 - Vel[k][j-1][i-1].x1);
       dVxdy /= pG->dx2;
       
       /* Monotonized Velocity gradient dVy/dy */
-      dVydy = limiter4(Vel[k][j+1][i  ].y - Vel[k][j  ][i  ].y,
-                       Vel[k][j  ][i  ].y - Vel[k][j-1][i  ].y,
-                       Vel[k][j+1][i-1].y - Vel[k][j  ][i-1].y,
-                       Vel[k][j  ][i-1].y - Vel[k][j-1][i-1].y);
+      dVydy = limiter4(Vel[k][j+1][i  ].x2 - Vel[k][j  ][i  ].x2,
+                       Vel[k][j  ][i  ].x2 - Vel[k][j-1][i  ].x2,
+                       Vel[k][j+1][i-1].x2 - Vel[k][j  ][i-1].x2,
+                       Vel[k][j  ][i-1].x2 - Vel[k][j-1][i-1].x2);
       dVydy /= pG->dx2;
       
       /* Monotonized Velocity gradient dVz/dy */
-      dVzdy = limiter4(Vel[k][j+1][i  ].z - Vel[k][j  ][i  ].z,
-                       Vel[k][j  ][i  ].z - Vel[k][j-1][i  ].z,
-                       Vel[k][j+1][i-1].z - Vel[k][j  ][i-1].z,
-                       Vel[k][j  ][i-1].z - Vel[k][j-1][i-1].z);
+      dVzdy = limiter4(Vel[k][j+1][i  ].x3 - Vel[k][j  ][i  ].x3,
+                       Vel[k][j  ][i  ].x3 - Vel[k][j-1][i  ].x3,
+                       Vel[k][j+1][i-1].x3 - Vel[k][j  ][i-1].x3,
+                       Vel[k][j  ][i-1].x3 - Vel[k][j-1][i-1].x3);
       dVzdy /= pG->dx2;
       
       /* Monotonized Velocity gradient dVx/dz, 3D problem ONLY */
       if (pD->Nx[2] > 1) {
-        dVxdz = limiter4(Vel[k+1][j][i  ].x - Vel[k  ][j][i  ].x,
-                         Vel[k  ][j][i  ].x - Vel[k-1][j][i  ].x,
-                         Vel[k+1][j][i-1].x - Vel[k  ][j][i-1].x,
-                         Vel[k  ][j][i-1].x - Vel[k-1][j][i-1].x);
+        dVxdz = limiter4(Vel[k+1][j][i  ].x1 - Vel[k  ][j][i  ].x1,
+                         Vel[k  ][j][i  ].x1 - Vel[k-1][j][i  ].x1,
+                         Vel[k+1][j][i-1].x1 - Vel[k  ][j][i-1].x1,
+                         Vel[k  ][j][i-1].x1 - Vel[k-1][j][i-1].x1);
         dVxdz /= pG->dx3;
       }
       
       /* Monotonized Velocity gradient dVy/dz */
       if (pD->Nx[2] > 1) {
-        dVydz = limiter4(Vel[k+1][j][i  ].y - Vel[k  ][j][i  ].y,
-                         Vel[k  ][j][i  ].y - Vel[k-1][j][i  ].y,
-                         Vel[k+1][j][i-1].y - Vel[k  ][j][i-1].y,
-                         Vel[k  ][j][i-1].y - Vel[k-1][j][i-1].y);
+        dVydz = limiter4(Vel[k+1][j][i  ].x2 - Vel[k  ][j][i  ].x2,
+                         Vel[k  ][j][i  ].x2 - Vel[k-1][j][i  ].x2,
+                         Vel[k+1][j][i-1].x2 - Vel[k  ][j][i-1].x2,
+                         Vel[k  ][j][i-1].x2 - Vel[k-1][j][i-1].x2);
         dVydz /= pG->dx3;
       }
       
       /* Monotonized Velocity gradient dVz/dz */
       if (pD->Nx[2] > 1) {
-        dVzdz = limiter4(Vel[k+1][j][i  ].z - Vel[k  ][j][i  ].z,
-                         Vel[k  ][j][i  ].z - Vel[k-1][j][i  ].z,
-                         Vel[k+1][j][i-1].z - Vel[k  ][j][i-1].z,
-                         Vel[k  ][j][i-1].z - Vel[k-1][j][i-1].z);
+        dVzdz = limiter4(Vel[k+1][j][i  ].x3 - Vel[k  ][j][i  ].x3,
+                         Vel[k  ][j][i  ].x3 - Vel[k-1][j][i  ].x3,
+                         Vel[k+1][j][i-1].x3 - Vel[k  ][j][i-1].x3,
+                         Vel[k  ][j][i-1].x3 - Vel[k-1][j][i-1].x3);
         dVzdz /= pG->dx3;
       }
       
@@ -459,50 +459,50 @@ void ViscStress_aniso(DomainS *pD)
     for (i=is; i<=ie; i++) {
 
       /* Monotonized Velocity gradient dVx/dx */
-      dVxdx = limiter4(Vel[k][j  ][i+1].x - Vel[k][j  ][i  ].x,
-                       Vel[k][j  ][i  ].x - Vel[k][j  ][i-1].x,
-                       Vel[k][j-1][i+1].x - Vel[k][j-1][i  ].x,
-                       Vel[k][j-1][i  ].x - Vel[k][j-1][i-1].x);
+      dVxdx = limiter4(Vel[k][j  ][i+1].x1 - Vel[k][j  ][i  ].x1,
+                       Vel[k][j  ][i  ].x1 - Vel[k][j  ][i-1].x1,
+                       Vel[k][j-1][i+1].x1 - Vel[k][j-1][i  ].x1,
+                       Vel[k][j-1][i  ].x1 - Vel[k][j-1][i-1].x1);
       dVxdx /= pG->dx1;
       
       /* Monotonized Velocity gradient dVy/dx */
-      dVydx = limiter4(Vel[k][j  ][i+1].y - Vel[k][j  ][i  ].y,
-                       Vel[k][j  ][i  ].y - Vel[k][j  ][i-1].y,
-                       Vel[k][j-1][i+1].y - Vel[k][j-1][i  ].y,
-                       Vel[k][j-1][i  ].y - Vel[k][j-1][i-1].y);
+      dVydx = limiter4(Vel[k][j  ][i+1].x2 - Vel[k][j  ][i  ].x2,
+                       Vel[k][j  ][i  ].x2 - Vel[k][j  ][i-1].x2,
+                       Vel[k][j-1][i+1].x2 - Vel[k][j-1][i  ].x2,
+                       Vel[k][j-1][i  ].x2 - Vel[k][j-1][i-1].x2);
       dVydx /= pG->dx1;
       
       /* Monotonized Velocity gradient dVz/dx */
-      dVzdx = limiter4(Vel[k][j  ][i+1].z - Vel[k][j  ][i  ].z,
-                       Vel[k][j  ][i  ].z - Vel[k][j  ][i-1].z,
-                       Vel[k][j-1][i+1].z - Vel[k][j-1][i  ].z,
-                       Vel[k][j-1][i  ].z - Vel[k][j-1][i-1].z);
+      dVzdx = limiter4(Vel[k][j  ][i+1].x3 - Vel[k][j  ][i  ].x3,
+                       Vel[k][j  ][i  ].x3 - Vel[k][j  ][i-1].x3,
+                       Vel[k][j-1][i+1].x3 - Vel[k][j-1][i  ].x3,
+                       Vel[k][j-1][i  ].x3 - Vel[k][j-1][i-1].x3);
       dVzdx /= pG->dx1;
       
       /* Monotonized Velocity gradient dVx/dz */
       if (pD->Nx[2] > 1) {
-        dVxdz = limiter4(Vel[k+1][j  ][i].x - Vel[k  ][j  ][i].x,
-                         Vel[k  ][j  ][i].x - Vel[k-1][j  ][i].x,
-                         Vel[k+1][j-1][i].x - Vel[k  ][j-1][i].x,
-                         Vel[k  ][j-1][i].x - Vel[k-1][j-1][i].x);
+        dVxdz = limiter4(Vel[k+1][j  ][i].x1 - Vel[k  ][j  ][i].x1,
+                         Vel[k  ][j  ][i].x1 - Vel[k-1][j  ][i].x1,
+                         Vel[k+1][j-1][i].x1 - Vel[k  ][j-1][i].x1,
+                         Vel[k  ][j-1][i].x1 - Vel[k-1][j-1][i].x1);
         dVxdz /= pG->dx3;
       }
       
       /* Monotonized Velocity gradient dVy/dz */
       if (pD->Nx[2] > 1) {
-        dVydz =limiter4(Vel[k+1][j  ][i].y - Vel[k  ][j  ][i].y,
-                        Vel[k  ][j  ][i].y - Vel[k-1][j  ][i].y,
-                        Vel[k+1][j-1][i].y - Vel[k  ][j-1][i].y,
-                        Vel[k  ][j-1][i].y - Vel[k-1][j-1][i].y);
+        dVydz =limiter4(Vel[k+1][j  ][i].x2 - Vel[k  ][j  ][i].x2,
+                        Vel[k  ][j  ][i].x2 - Vel[k-1][j  ][i].x2,
+                        Vel[k+1][j-1][i].x2 - Vel[k  ][j-1][i].x2,
+                        Vel[k  ][j-1][i].x2 - Vel[k-1][j-1][i].x2);
         dVydz /= pG->dx3;
       }
       
       /* Monotonized Velocity gradient dVz/dz */
       if (pD->Nx[2] > 1) {
-        dVzdz =limiter4(Vel[k+1][j  ][i].z - Vel[k  ][j  ][i].z,
-                        Vel[k  ][j  ][i].z - Vel[k-1][j  ][i].z,
-                        Vel[k+1][j-1][i].z - Vel[k  ][j-1][i].z,
-                        Vel[k  ][j-1][i].z - Vel[k-1][j-1][i].z);
+        dVzdz =limiter4(Vel[k+1][j  ][i].x3 - Vel[k  ][j  ][i].x3,
+                        Vel[k  ][j  ][i].x3 - Vel[k-1][j  ][i].x3,
+                        Vel[k+1][j-1][i].x3 - Vel[k  ][j-1][i].x3,
+                        Vel[k  ][j-1][i].x3 - Vel[k-1][j-1][i].x3);
         dVzdz /= pG->dx3;
       }
       
@@ -565,45 +565,45 @@ void ViscStress_aniso(DomainS *pD)
       for (i=is; i<=ie; i++) {
 
         /* Monotonized Velocity gradient dVx/dx */
-        dVxdx = limiter4(Vel[k  ][j][i+1].x - Vel[k  ][j][i  ].x,
-                         Vel[k  ][j][i  ].x - Vel[k  ][j][i-1].x,
-                         Vel[k-1][j][i+1].x - Vel[k-1][j][i  ].x,
-                         Vel[k-1][j][i  ].x - Vel[k-1][j][i-1].x);
+        dVxdx = limiter4(Vel[k  ][j][i+1].x1 - Vel[k  ][j][i  ].x1,
+                         Vel[k  ][j][i  ].x1 - Vel[k  ][j][i-1].x1,
+                         Vel[k-1][j][i+1].x1 - Vel[k-1][j][i  ].x1,
+                         Vel[k-1][j][i  ].x1 - Vel[k-1][j][i-1].x1);
         dVxdx /= pG->dx1;
         
         /* Monotonized Velocity gradient dVy/dx */
-        dVydx = limiter4(Vel[k  ][j][i+1].y - Vel[k  ][j][i  ].y,
-                         Vel[k  ][j][i  ].y - Vel[k  ][j][i-1].y,
-                         Vel[k-1][j][i+1].y - Vel[k-1][j][i  ].y,
-                         Vel[k-1][j][i  ].y - Vel[k-1][j][i-1].y);
+        dVydx = limiter4(Vel[k  ][j][i+1].x2 - Vel[k  ][j][i  ].x2,
+                         Vel[k  ][j][i  ].x2 - Vel[k  ][j][i-1].x2,
+                         Vel[k-1][j][i+1].x2 - Vel[k-1][j][i  ].x2,
+                         Vel[k-1][j][i  ].x2 - Vel[k-1][j][i-1].x2);
         dVydx /= pG->dx1;
         
         /* Monotonized Velocity gradient dVz/dx */
-        dVzdx = limiter4(Vel[k  ][j][i+1].z - Vel[k  ][j][i  ].z,
-                         Vel[k  ][j][i  ].z - Vel[k  ][j][i-1].z,
-                         Vel[k-1][j][i+1].z - Vel[k-1][j][i  ].z,
-                         Vel[k-1][j][i  ].z - Vel[k-1][j][i-1].z);
+        dVzdx = limiter4(Vel[k  ][j][i+1].x3 - Vel[k  ][j][i  ].x3,
+                         Vel[k  ][j][i  ].x3 - Vel[k  ][j][i-1].x3,
+                         Vel[k-1][j][i+1].x3 - Vel[k-1][j][i  ].x3,
+                         Vel[k-1][j][i  ].x3 - Vel[k-1][j][i-1].x3);
         dVzdx /= pG->dx1;
         
         /* Monotonized Velocity gradient dVx/dy */
-        dVxdy = limiter4(Vel[k  ][j+1][i].x - Vel[k  ][j  ][i].x,
-                         Vel[k  ][j  ][i].x - Vel[k  ][j-1][i].x,
-                         Vel[k-1][j+1][i].x - Vel[k-1][j  ][i].x,
-                         Vel[k-1][j  ][i].x - Vel[k-1][j-1][i].x);
+        dVxdy = limiter4(Vel[k  ][j+1][i].x1 - Vel[k  ][j  ][i].x1,
+                         Vel[k  ][j  ][i].x1 - Vel[k  ][j-1][i].x1,
+                         Vel[k-1][j+1][i].x1 - Vel[k-1][j  ][i].x1,
+                         Vel[k-1][j  ][i].x1 - Vel[k-1][j-1][i].x1);
         dVxdy /= pG->dx2;
         
         /* Monotonized Velocity gradient dVy/dy */
-        dVydy = limiter4(Vel[k  ][j+1][i].y - Vel[k  ][j  ][i].y,
-                         Vel[k  ][j  ][i].y - Vel[k  ][j-1][i].y,
-                         Vel[k-1][j+1][i].y - Vel[k-1][j  ][i].y,
-                         Vel[k-1][j  ][i].y - Vel[k-1][j-1][i].y);
+        dVydy = limiter4(Vel[k  ][j+1][i].x2 - Vel[k  ][j  ][i].x2,
+                         Vel[k  ][j  ][i].x2 - Vel[k  ][j-1][i].x2,
+                         Vel[k-1][j+1][i].x2 - Vel[k-1][j  ][i].x2,
+                         Vel[k-1][j  ][i].x2 - Vel[k-1][j-1][i].x2);
         dVydy /= pG->dx2;
         
         /* Monotonized Velocity gradient dVz/dy */
-        dVzdy = limiter4(Vel[k  ][j+1][i].z - Vel[k  ][j  ][i].z,
-                         Vel[k  ][j  ][i].z - Vel[k  ][j-1][i].z,
-                         Vel[k-1][j+1][i].z - Vel[k-1][j  ][i].z,
-                         Vel[k-1][j  ][i].z - Vel[k-1][j-1][i].z);
+        dVzdy = limiter4(Vel[k  ][j+1][i].x3 - Vel[k  ][j  ][i].x3,
+                         Vel[k  ][j  ][i].x3 - Vel[k  ][j-1][i].x3,
+                         Vel[k-1][j+1][i].x3 - Vel[k-1][j  ][i].x3,
+                         Vel[k-1][j  ][i].x3 - Vel[k-1][j-1][i].x3);
         dVzdy /= pG->dx2;
         
 /* Compute field components at x3-interface */
