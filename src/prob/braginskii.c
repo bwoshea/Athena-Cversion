@@ -1,10 +1,9 @@
 #include "copyright.h"
 /*============================================================================*/
-/*! \file current_sheet.c
- *  \brief Problem generator for current sheet test. 
+/*! \file braginskii.c
+ *  \brief Problem generator for Braginskii viscosity
  *
- * PURPOSE: Problem generator for current sheet test.  This version only allows
- *   current sheet in X-Y plane, with Bz=0.  
+ * PURPOSE: Problem generator for Braginskii viscosity
  *
  * REFERENCE: */
 /*============================================================================*/
@@ -18,7 +17,7 @@
 #include "prototypes.h"
 
 #ifdef HYDRO
-#error : The current sheet test only works for MHD.
+#error : The Braginskii test only works for MHD.
 #endif /* HYDRO */
 
 /*----------------------------------------------------------------------------*/
@@ -35,7 +34,6 @@ void problem(DomainS *pDomain)
   Real x1,x2,x3;
   Real Bx;
 
-/* setup uniform ambient medium with current sheet */
 
   nu_aniso = par_getd_def("problem","nu_aniso",0.0);
   nu_iso = par_getd_def("problem","nu_iso",0.0);
@@ -43,14 +41,14 @@ void problem(DomainS *pDomain)
   W.P = 1.0;
   W.Vx = 0.0;
   W.Vz = 0.0;
-  Bx = 0.0;
-  W.By = 1.0;
-  W.Bz = 0.0;
+  Bx = par_getd_def("problem","Bx",0.0)*1.e-6;
+  W.By = par_getd_def("problem","By",0.0)*1.e-6;
+  W.Bz = par_getd_def("problem","Bz",0.0)*1.e-6;
   for (k=ks; k<=ke; k++) {
     for (j=js; j<=je; j++) {
       for (i=is; i<=ie; i++) {
         cc_pos(pGrid,i,j,k,&x1,&x2,&x3);
-        W.Vy = 1.5-0.5*(1+erf((x1-0.25)/0.01)-erf((x1+0.25)/0.01));
+        W.Vy = -0.5*(1+erf((x1-0.25)/0.1)-erf((x1+0.25)/0.1));
         U1d = Prim1D_to_Cons1D(&(W), &Bx);
         pGrid->U[k][j][i].d  = U1d.d;
         pGrid->U[k][j][i].M1 = U1d.Mx; 
@@ -66,13 +64,13 @@ void problem(DomainS *pDomain)
         pGrid->B2i[k][j][i] = U1d.By;
         pGrid->B3i[k][j][i] = U1d.Bz;
         if (i == ie) pGrid->B1i[k][j][i+1] = Bx;
-        if (j == je) pGrid->B2i[k][j+1][i] = U1d.By;
+        if (j == je && je > js) pGrid->B2i[k][j+1][i] = U1d.By;
         if (k == ke && ke > ks) pGrid->B3i[k+1][j][i] = U1d.Bz;
-        if (x1 > 0.5 && x1 < 1.5) {
-          pGrid->B2i[k][j][i] = -U1d.By;
-          pGrid->U[k][j][i].B2c = -U1d.By;
-          if (j == je) pGrid->B2i[k][j+1][i] = -U1d.By;
-        }
+        /*        if (x1 > 0.5 && x1 < 1.5) {
+         *          pGrid->B2i[k][j][i] = -U1d.By;
+         *          pGrid->U[k][j][i].B2c = -U1d.By;
+         *          if (j == je) pGrid->B2i[k][j+1][i] = -U1d.By;
+         *        }*/
       }
     }
   }
