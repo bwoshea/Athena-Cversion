@@ -83,7 +83,8 @@ static int nx1,nx2,nx3,gnx1,gnx2,gnx3;
 /* Starting and ending indices for global grid */
 static int gis,gie,gjs,gje,gks,gke;
 /* Seed for random number generator */
-long int rseed;
+long int rseed = -1;
+long int prevrseed;
 #ifdef MHD
 /* beta = isothermal pressure / magnetic pressure
  * B0 = sqrt(2.0*Iso_csound2*rhobar/beta) is init magnetic field strength */
@@ -305,7 +306,7 @@ static inline void generate()
   /* Transform perturbations to real space, but don't normalize until
    * just before we apply them in perturb() */
   transform();
-
+  
   return;
 }
 
@@ -451,6 +452,7 @@ static void initialize(GridS *pGrid, DomainS *pD)
   int i, is=pGrid->is, ie = pGrid->ie;
   int j, js=pGrid->js, je = pGrid->je;
   int k, ks=pGrid->ks, ke = pGrid->ke;
+  int ixs,jxs,kxs;
   int nbuf, mpierr, nx1gh, nx2gh, nx3gh;
   float kwv, kpara, kperp;
   char donedrive = 0;
@@ -482,6 +484,7 @@ static void initialize(GridS *pGrid, DomainS *pD)
   nx2gh = nx2 + 2*nghost;
   nx3gh = nx3 + 2*nghost;
 
+
   /* Get input parameters */
 
   /* interval for generating new driving spectrum; also interval for
@@ -509,6 +512,20 @@ static void initialize(GridS *pGrid, DomainS *pD)
   klow = par_getd("problem","klow"); /* in integer units */
   khigh = par_getd("problem","khigh"); /* in integer units */
   dkx = 2.0*PI/(pGrid->dx1*gnx1); /* convert k from integer */
+
+  /* if this is a fresh seed from initial conditions */
+  if (rseed < 0) {
+    rseed = (long)par_getd("problem","rseed");
+
+    ixs = pGrid->Disp[0];
+    jxs = pGrid->Disp[1];
+    kxs = pGrid->Disp[2];
+    /* make it unique seed for each MPI process */
+    rseed -= (ixs + pD->Nx[0]*(jxs + pD->Nx[1]*kxs));
+  } 
+  
+  tdrive = par_getd_def("problem","tdrive",0.);
+
 
   /* Driven or decaying */
   idrive = par_geti("problem","idrive");
@@ -562,15 +579,8 @@ void problem(DomainS *pDomain)
   int i, is=pGrid->is, ie = pGrid->ie;
   int j, js=pGrid->js, je = pGrid->je;
   int k, ks=pGrid->ks, ke = pGrid->ke;
-  int ixs,jxs,kxs;
 
-/* Ensure a different initial random seed for each process in an MPI calc. */
-  ixs = pGrid->Disp[0];
-  jxs = pGrid->Disp[1];
-  kxs = pGrid->Disp[2];
-  rseed = -1 - (ixs + pDomain->Nx[0]*(jxs + pDomain->Nx[1]*kxs));
   initialize(pGrid, pDomain);
-  tdrive = 0.0;
 
   /* Initialize uniform density and momenta */
   for (k=ks-nghost; k<=ke+nghost; k++) {
@@ -676,6 +686,15 @@ void Userwork_in_loop(MeshS *pM)
               /* Only drive at intervals of dtdrive */
               perturb(pGrid, dtdrive);
 #endif /* IMPULSIVE_DRIVING */
+              
+              /* saving the last time of driving to parameter settings here so
+               * that it is automatically dumped during restart outputs
+               */
+              par_setd("problem","tdrive","%.12e",tdrive,"Last generation time of forc spec");
+              /* keep record of previous seed (required for regenerating forcing
+               * field after restart
+               */
+              prevrseed = rseed;  
 
               /* Compute new spectrum after dtdrive.  Putting this after perturb()
                * means we won't be applying perturbations from a new power spectrum
@@ -689,6 +708,7 @@ void Userwork_in_loop(MeshS *pM)
       }
     }
   }
+//  printf("ID= %i rseed: %li \n",myID_Comm_world,rseed);
 
   return;
 }
@@ -703,13 +723,23 @@ void Userwork_after_loop(MeshS *pM)
 }
 
 void problem_write_restart(MeshS *pM, FILE *fp)
-{  return;  }
+{
+  /* write the previous random seed to output file as
+   * the generate() function is called on every restart
+   * and we thus produce the the forcing field that was
+   * present at the time of the dump
+   */
+  fwrite(&prevrseed, sizeof(long int),1,fp);  
+  return;
+}
 
 void problem_read_restart(MeshS *pM, FILE *fp)
 {  
   GridS *pGrid;
   DomainS *pDomain;
   int nl, nd;
+  double dirty;
+  long int origrseed;
   int ixs,jxs,kxs;
   
   for (nl=0; nl<(pM->NLevels); nl++){
@@ -718,14 +748,24 @@ void problem_read_restart(MeshS *pM, FILE *fp)
 
          pGrid = pM->Domain[nl][nd].Grid;
          pDomain = &(pM->Domain[nl][nd]);  //Allocate memory and initialize everything
-	 /* Ensure a different initial random seed for each process in an MPI calc. */
-	 ixs = pGrid->Disp[0];
-	 jxs = pGrid->Disp[1];
-	 kxs = pGrid->Disp[2];
-	 rseed = -1 - (ixs + pDomain->Nx[0]*(jxs + pDomain->Nx[1]*kxs));
+         
+         /* get current random seed for individual process */
+         fread(&rseed, sizeof(long int),1,fp);
+         /* fast forward RNG
+          * the dirty version for not saving the state vectors...
+          */
+         origrseed = (long)par_getd("problem","rseed");
+         ixs = pGrid->Disp[0];
+         jxs = pGrid->Disp[1];
+         kxs = pGrid->Disp[2];
+         /* make it unique seed for each MPI process */
+         origrseed -= (ixs + pDomain->Nx[0]*(jxs + pDomain->Nx[1]*kxs));
+         while (origrseed != rseed)
+           dirty = ran2(&origrseed);
+
          initialize(pGrid, pDomain);
-         tdrive = pGrid->time;
-	 //Generate a new power spectrum
+	 
+   //Generate a new power spectrum
 	 if (idrive == 0) generate();
 
       }
