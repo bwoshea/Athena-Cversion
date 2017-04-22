@@ -766,7 +766,10 @@ void problem_read_restart(MeshS *pM, FILE *fp)
          initialize(pGrid, pDomain);
 	 
    //Generate a new power spectrum
-	 if (idrive == 0) generate();
+	 if (idrive == 0) {
+         prevrseed = rseed;           
+         generate();
+     }
 
       }
     }
