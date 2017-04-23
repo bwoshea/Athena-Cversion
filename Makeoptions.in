@@ -104,6 +104,15 @@ ifeq ($(MACHINE),hlrn)
   FFTWLIB = -L$FFTW_DIR -lfftw3
   FFTWINC = -I$FFTW_INC
 else
+ifeq ($(MACHINE),bluewaters)
+  CC  = cc
+  LDR = cc
+  OPT = -fast 
+  MPIINC = #-I/opt/mpich2/intel/include
+  MPILIB = #-L/opt/mpich2/intel/lib -lmpich
+  FFTWLIB = -L$FFTW_DIR -lfftw3
+  FFTWINC = -I$FFTW_INC
+else
 ifeq ($(MACHINE),zenith)
   CC  = mpicc
   LDR = mpicc
@@ -121,6 +130,7 @@ ifeq ($(MACHINE),macosx)
   FFTWINC = -I/opt/local/include
 else
   abort Unsupported MACHINE=$(MACHINE)
+endif
 endif
 endif
 endif
