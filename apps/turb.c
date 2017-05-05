@@ -634,8 +634,26 @@ void problem(DomainS *pDomain)
   return;
 }
 
+static Real getDVOne(const GridS *pG, const int i, const int j, const int k)
+{
+  return (dv1[k][j][i]); 
+}
+
+static Real getDVTwo(const GridS *pG, const int i, const int j, const int k)
+{
+  return (dv2[k][j][i]); 
+}
+
+static Real getDVThree(const GridS *pG, const int i, const int j, const int k)
+{
+  return (dv3[k][j][i]); 
+}
+
 ConsFun_t get_usr_expr(const char *expr)
 {
+  if(strcmp(expr,"DV1")==0) return getDVOne;
+  if(strcmp(expr,"DV2")==0) return getDVTwo;
+  if(strcmp(expr,"DV3")==0) return getDVThree;
   return NULL;
 }
 
