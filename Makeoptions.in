@@ -93,6 +93,26 @@ ifeq ($(MACHINE),aether)
   MPIINC = -I~/lam-7.1.4/include
   MPILIB = -L~/lam-7.1.4/lib
 else
+ifeq ($(MACHINE),hlrn)
+  CC  = cc
+  LDR = cc
+  # host optimization is taken care of by PrgEnv seetings, e.g.
+  # module load craype-haswell
+  OPT = -ipo -O3 -no-prec-div -Wall 
+  MPIINC = #-I/opt/mpich2/intel/include
+  MPILIB = #-L/opt/mpich2/intel/lib -lmpich
+  FFTWLIB = -L$FFTW_DIR -lfftw3
+  FFTWINC = -I$FFTW_INC
+else
+ifeq ($(MACHINE),bluewaters)
+  CC  = cc
+  LDR = cc
+  OPT = -fast 
+  MPIINC = #-I/opt/mpich2/intel/include
+  MPILIB = #-L/opt/mpich2/intel/lib -lmpich
+  FFTWLIB = -L$FFTW_DIR -lfftw3
+  FFTWINC = -I$FFTW_INC
+else
 ifeq ($(MACHINE),zenith)
   CC  = mpicc
   LDR = mpicc
@@ -109,7 +129,21 @@ ifeq ($(MACHINE),macosx)
   FFTWLIB = -L/opt/local/lib -lfftw3
   FFTWINC = -I/opt/local/include
 else
+ifeq ($(MACHINE),hpcc-mpi)
+  CC  = /opt/software/OpenMPI/1.4.4--Intel-13.0.1.117/bin/mpicc
+  LDR = /opt/software/OpenMPI/1.4.4--Intel-13.0.1.117/bin/mpicc
+  OPT = -ipo -O3 -no-prec-div -xHost -Wall
+#  OPT = -O3
+#  OPT = -O0
+  MPIINC = -I/opt/software/OpenMPI/1.4.4--Intel-13.0.1.117/include
+  MPILIB = -L/opt/software/OpenMPI/1.4.4--Intel-13.0.1.117/lib -lmpi
+  FFTWLIB = -L/opt/software/fftw/3.3.3--Intel-13.0.1.117--OpenMPI-1.4.4/lib -lfftw3
+  FFTWINC = -I/opt/software/fftw/3.3.3--Intel-13.0.1.117--OpenMPI-1.4.4/include
+else
   abort Unsupported MACHINE=$(MACHINE)
+endif
+endif
+endif
 endif
 endif
 endif

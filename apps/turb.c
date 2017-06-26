@@ -7,6 +7,7 @@
  *   in 3D with periodic BC.  Arbitrary power spectrum specified using ispect:
  *  -  ispect=1: power law - original form
  *  -  ispect=2: form from Gammie&Ostriker
+ *  -  ispect=3: parabolic form from Schmidt et al. A&A, 2009, 494, 127-145
  *  Driving specified using idrive
  *  -  idrive=0: driven turbulence (de=dedt*dt before each time step,
  *                                     unless IMPULSIVE_DRIVING enabled)
@@ -82,7 +83,8 @@ static int nx1,nx2,nx3,gnx1,gnx2,gnx3;
 /* Starting and ending indices for global grid */
 static int gis,gie,gjs,gje,gks,gke;
 /* Seed for random number generator */
-long int rseed;
+long int rseed = -1;
+long int prevrseed;
 #ifdef MHD
 /* beta = isothermal pressure / magnetic pressure
  * B0 = sqrt(2.0*Iso_csound2*rhobar/beta) is init magnetic field strength */
@@ -138,23 +140,27 @@ static void pspect(ath_fft_data *ampl)
   double q1,q2,q3;
 
   /* set random amplitudes with gaussian deviation */
-  for (k=0; k<nx3; k++) {
-    for (j=0; j<nx2; j++) {
-      for (i=0; i<nx1; i++) {
-        q1 = ran2(&rseed);
-        q2 = ran2(&rseed);
-        q3 = sqrt(-2.0*log(q1+1.0e-20))*cos(2.0*PI*q2);
-        q1 = ran2(&rseed);
-        ampl[OFST(i,j,k)][0] = q3*cos(2.0*PI*q1);
-        ampl[OFST(i,j,k)][1] = q3*sin(2.0*PI*q1);
+  if (ispect != 3) {
+    for (k=0; k<nx3; k++) {
+      for (j=0; j<nx2; j++) {
+        for (i=0; i<nx1; i++) {
+          q1 = ran2(&rseed);
+          q2 = ran2(&rseed);
+          q3 = sqrt(-2.0*log(q1+1.0e-20))*cos(2.0*PI*q2);
+          q1 = ran2(&rseed);
+          ampl[OFST(i,j,k)][0] = q3*cos(2.0*PI*q1);
+          ampl[OFST(i,j,k)][1] = q3*sin(2.0*PI*q1);
+        }
       }
     }
   }
-
   /* set power spectrum
    *   ispect=1: power law - original form
    *   ispect=2: form from Gammie&Ostriker
+   *   ispect=3: parabolic form from Schmidt et al. A&A, 2009, 494, 127-145
    */
+  double tmp;
+
   for (k=0; k<nx3; k++) {
     for (j=0; j<nx2; j++) {
       for (i=0; i<nx1; i++) {
@@ -170,6 +176,13 @@ static void pspect(ath_fft_data *ampl)
             /* G&O form */
             ampl[OFST(i,j,k)][0] *= pow(q3,3.0)*exp(-4.0*q3/kpeak);
             ampl[OFST(i,j,k)][1] *= pow(q3,3.0)*exp(-4.0*q3/kpeak);
+          } else if (ispect == 3) {
+            /* parabolic form */
+            tmp = pow(q3/kpeak,2.)*(2.-pow(q3/kpeak,2.));
+            if (tmp < 0.)
+              tmp = 0.;
+            ampl[OFST(i,j,k)][0] = tmp;
+            ampl[OFST(i,j,k)][1] = tmp;
           }
         } else {
           /* introduce cut-offs at klow and khigh */
@@ -179,6 +192,32 @@ static void pspect(ath_fft_data *ampl)
       }
     }
   }
+  
+  // Apply Gaussian deviations (from Numerical Recipes and W. Schmidt)
+  double v_sqr, v1, v2;
+  double norm; 
+  
+  if (ispect == 3) {
+    for (k=0; k<nx3; k++) {
+      for (j=0; j<nx2; j++) {
+        for (i=0; i<nx1; i++) {
+
+          do {        
+            v1 = 2.0* ran2(&rseed) - 1.0;
+            v2 = 2.0* ran2(&rseed) - 1.0;
+            v_sqr = v1*v1+v2*v2;
+          } while (v_sqr >= 1.0 || v_sqr == 0.0);
+
+          norm = sqrt(-2.0*log(v_sqr)/v_sqr);
+
+          ampl[OFST(i,j,k)][0] *= norm * v1;
+          ampl[OFST(i,j,k)][1] *= norm * v2;
+
+        }
+      }
+    }
+  }
+  
   ampl[0][0] = 0.0;
   ampl[0][1] = 0.0;
 
@@ -267,7 +306,7 @@ static inline void generate()
   /* Transform perturbations to real space, but don't normalize until
    * just before we apply them in perturb() */
   transform();
-
+  
   return;
 }
 
@@ -413,6 +452,7 @@ static void initialize(GridS *pGrid, DomainS *pD)
   int i, is=pGrid->is, ie = pGrid->ie;
   int j, js=pGrid->js, je = pGrid->je;
   int k, ks=pGrid->ks, ke = pGrid->ke;
+  int ixs,jxs,kxs;
   int nbuf, mpierr, nx1gh, nx2gh, nx3gh;
   float kwv, kpara, kperp;
   char donedrive = 0;
@@ -434,15 +474,16 @@ static void initialize(GridS *pGrid, DomainS *pD)
   gnx3 = pD->Nx[2];
 
   /* Get extents of local FFT grid in global coordinates */
-  gis=is+pGrid->Disp[0];  gie=ie+pGrid->Disp[0];
-  gjs=js+pGrid->Disp[1];  gje=je+pGrid->Disp[1];
-  gks=ks+pGrid->Disp[2];  gke=ke+pGrid->Disp[2];
+  gis=is+pGrid->Disp[0]-nghost;  gie=ie+pGrid->Disp[0];
+  gjs=js+pGrid->Disp[1]-nghost;  gje=je+pGrid->Disp[1];
+  gks=ks+pGrid->Disp[2]-nghost;  gke=ke+pGrid->Disp[2];
 /* ----------------------------------------------------------- */
 
   /* Get size of arrays with ghost cells */
   nx1gh = nx1 + 2*nghost;
   nx2gh = nx2 + 2*nghost;
   nx3gh = nx3 + 2*nghost;
+
 
   /* Get input parameters */
 
@@ -462,7 +503,7 @@ static void initialize(GridS *pGrid, DomainS *pD)
   ispect = par_geti("problem","ispect");
   if (ispect == 1) {
     expo = par_getd("problem","expo");
-  } else if (ispect == 2) {
+  } else if (ispect == 2 || ispect == 3) {
     kpeak = par_getd("problem","kpeak")*2.0*PI;
   } else {
     ath_error("Invalid value for ispect\n");
@@ -471,6 +512,20 @@ static void initialize(GridS *pGrid, DomainS *pD)
   klow = par_getd("problem","klow"); /* in integer units */
   khigh = par_getd("problem","khigh"); /* in integer units */
   dkx = 2.0*PI/(pGrid->dx1*gnx1); /* convert k from integer */
+
+  /* if this is a fresh seed from initial conditions */
+  if (rseed < 0) {
+    rseed = (long)par_getd("problem","rseed");
+
+    ixs = pGrid->Disp[0];
+    jxs = pGrid->Disp[1];
+    kxs = pGrid->Disp[2];
+    /* make it unique seed for each MPI process */
+    rseed -= (ixs + pD->Nx[0]*(jxs + pD->Nx[1]*kxs));
+  } 
+  
+  tdrive = par_getd_def("problem","tdrive",0.);
+
 
   /* Driven or decaying */
   idrive = par_geti("problem","idrive");
@@ -524,15 +579,8 @@ void problem(DomainS *pDomain)
   int i, is=pGrid->is, ie = pGrid->ie;
   int j, js=pGrid->js, je = pGrid->je;
   int k, ks=pGrid->ks, ke = pGrid->ke;
-  int ixs,jxs,kxs;
 
-/* Ensure a different initial random seed for each process in an MPI calc. */
-  ixs = pGrid->Disp[0];
-  jxs = pGrid->Disp[1];
-  kxs = pGrid->Disp[2];
-  rseed = -1 - (ixs + pDomain->Nx[0]*(jxs + pDomain->Nx[1]*kxs));
   initialize(pGrid, pDomain);
-  tdrive = 0.0;
 
   /* Initialize uniform density and momenta */
   for (k=ks-nghost; k<=ke+nghost; k++) {
@@ -586,8 +634,26 @@ void problem(DomainS *pDomain)
   return;
 }
 
+static Real getDVOne(const GridS *pG, const int i, const int j, const int k)
+{
+  return (dv1[k][j][i]); 
+}
+
+static Real getDVTwo(const GridS *pG, const int i, const int j, const int k)
+{
+  return (dv2[k][j][i]); 
+}
+
+static Real getDVThree(const GridS *pG, const int i, const int j, const int k)
+{
+  return (dv3[k][j][i]); 
+}
+
 ConsFun_t get_usr_expr(const char *expr)
 {
+  if(strcmp(expr,"DV1")==0) return getDVOne;
+  if(strcmp(expr,"DV2")==0) return getDVTwo;
+  if(strcmp(expr,"DV3")==0) return getDVThree;
   return NULL;
 }
 
@@ -638,6 +704,15 @@ void Userwork_in_loop(MeshS *pM)
               /* Only drive at intervals of dtdrive */
               perturb(pGrid, dtdrive);
 #endif /* IMPULSIVE_DRIVING */
+              
+              /* saving the last time of driving to parameter settings here so
+               * that it is automatically dumped during restart outputs
+               */
+              par_setd("problem","tdrive","%.12e",tdrive,"Last generation time of forc spec");
+              /* keep record of previous seed (required for regenerating forcing
+               * field after restart
+               */
+              prevrseed = rseed;  
 
               /* Compute new spectrum after dtdrive.  Putting this after perturb()
                * means we won't be applying perturbations from a new power spectrum
@@ -651,6 +726,7 @@ void Userwork_in_loop(MeshS *pM)
       }
     }
   }
+//  printf("ID= %i rseed: %li \n",myID_Comm_world,rseed);
 
   return;
 }
@@ -665,32 +741,57 @@ void Userwork_after_loop(MeshS *pM)
 }
 
 void problem_write_restart(MeshS *pM, FILE *fp)
-{  return;  }
+{
+  /* write the previous random seed to output file as
+   * the generate() function is called on every restart
+   * and we thus produce the the forcing field that was
+   * present at the time of the dump
+   */
+  fwrite(&prevrseed, sizeof(long int),1,fp);  
+  return;
+}
 
 void problem_read_restart(MeshS *pM, FILE *fp)
 {  
-/*  GridS *pGrid;
+  GridS *pGrid;
   DomainS *pDomain;
   int nl, nd;
+  double dirty;
+  long int origrseed;
+  int ixs,jxs,kxs;
   
   for (nl=0; nl<(pM->NLevels); nl++){
     for (nd=0; nd<(pM->DomainsPerLevel[nl]); nd++){
       if (pM->Domain[nl][nd].Grid != NULL){
 
          pGrid = pM->Domain[nl][nd].Grid;
-         pDomain = pM->Domain[nl][nd];
-*/  /* Allocate memory and initialize everything */
-/*         rseed  = (pGrid->my_id+1);
-         initialize(pGrid, pDomain);
-         tdrive = pGrid->time;
+         pDomain = &(pM->Domain[nl][nd]);  //Allocate memory and initialize everything
+         
+         /* get current random seed for individual process */
+         fread(&rseed, sizeof(long int),1,fp);
+         /* fast forward RNG
+          * the dirty version for not saving the state vectors...
+          */
+         origrseed = (long)par_getd("problem","rseed");
+         ixs = pGrid->Disp[0];
+         jxs = pGrid->Disp[1];
+         kxs = pGrid->Disp[2];
+         /* make it unique seed for each MPI process */
+         origrseed -= (ixs + pDomain->Nx[0]*(jxs + pDomain->Nx[1]*kxs));
+         while (origrseed != rseed)
+           dirty = ran2(&origrseed);
 
-*/  /* Generate a new power spectrum */
-/*         if (idrive == 0) generate();
+         initialize(pGrid, pDomain);
+	 
+   //Generate a new power spectrum
+	 if (idrive == 0) {
+         prevrseed = rseed;           
+         generate();
+     }
 
       }
     }
   }
-*/
   return;
 }
 
